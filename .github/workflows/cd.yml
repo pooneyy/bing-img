@@ -1,0 +1,39 @@
+name: Download Bing Today's Wallpaper
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * *'
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: photostructure/git-ssh-signing-action@v1
+        with:
+          ssh-signing-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          git-user-name: ${{ github.actor }}
+          git-user-email: ${{ secrets.EMAIL }}
+
+      - name: Download Today's Wallpaper images
+        run: |
+          REGIONS=("de-DE" "en-CA" "en-GB" "en-IN" "en-US" "es-ES" "fr-FR" "it-IT" "ja-JP" "pt-BR" "zh-CN")
+          for REGION in "${REGIONS[@]}"; do
+            API_URL="https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=$REGION"
+            IMAGE_URL="https://www.bing.com$(curl -s $API_URL | jq -r '.images[0].urlbase')_1920x1080.jpg"
+            IMAGE_PATH="images/$REGION"
+            mkdir -p $IMAGE_PATH
+            FILE_NAME="$(date +"%Y%m%d").jpg"
+            curl -s $IMAGE_URL -o $IMAGE_PATH/$FILE_NAME
+            cp $IMAGE_PATH/$FILE_NAME $IMAGE_PATH/latest.jpg
+          done
+          cp images/en-US/latest.jpg images/latest.jpg
+
+      - name: Create Commit and Push
+        run: |
+          git config --global core.symlinks true
+          git add .
+          git commit -m "chore(images): update today's photos"
+          git push https://${{ github.actor }}:${{ github.token }}@github.com/${{ github.repository }}.git
