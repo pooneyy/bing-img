@@ -31,6 +31,31 @@ jobs:
           done
           cp images/en-US/latest.jpg images/latest.jpg
 
+      - name: Save Today's Wallpaper images urls
+        run: |
+          REGIONS=("de-DE" "en-CA" "en-GB" "en-IN" "en-US" "es-ES" "fr-FR" "it-IT" "ja-JP" "pt-BR" "zh-CN")
+          TODAY="$(date +%Y%m%d)"
+          for REGION in "${REGIONS[@]}"; do
+            API_URL="https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=$REGION"
+            IMAGE_INFO=$(curl -s "$API_URL")
+            URL_BASE="$(echo "$IMAGE_INFO" | jq -r '.images[0].urlbase')"
+            UHD_URL="https://www.bing.com${URL_BASE}_UHD.jpg"
+            HD_URL="${UHD_URL}&w=1920&h=1080&rs=0&c=4"
+            COPYRIGHT="$(echo "$IMAGE_INFO" | jq -r '.images[0].copyright')"
+            TITLE="$(echo "$IMAGE_INFO" | jq -r '.images[0].title')"
+            URL_PATH="urls/$REGION"
+            mkdir -p $URL_PATH
+            FILE_NAME="$TODAY.json"
+            jq -n \
+              --arg urlbase "$URL_BASE" \
+              --arg uhd "$UHD_URL" \
+              --arg hd "$HD_URL" \
+              --arg copyright "$COPYRIGHT" \
+              --arg title "$TITLE" \
+              '{ "urlbase": $urlbase, "imageUrl": { "uhd": $uhd, "1920x1080": $hd }, "copyright": $copyright, "title": $title }' \
+              > "$URL_PATH/$FILE_NAME"
+          done
+
       - name: Create Commit and Push
         run: |
           git config --global core.symlinks true
