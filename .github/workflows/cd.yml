@@ -54,7 +54,9 @@ jobs:
               --arg title "$TITLE" \
               '{ "urlbase": $urlbase, "imageUrl": { "uhd": $uhd, "1920x1080": $hd }, "copyright": $copyright, "title": $title }' \
               > "$URL_PATH/$FILE_NAME"
+            cp $URL_PATH/$FILE_NAME $URL_PATH/latest.json
           done
+          cp urls/en-US/latest.json urls/latest.json
 
       - name: Create Commit and Push
         run: |
